@@ -1,4 +1,0 @@
-
-//                               API Methods                                  //
-
-//                            Prototype Methods                               //

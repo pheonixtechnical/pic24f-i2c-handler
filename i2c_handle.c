@@ -47,11 +47,11 @@ eI2cState i2cState;
 
 //                               API Methods                                  //
 void runI2cHandler(void);
-uint8_t requestStart(uint8_t *ptrStatus);
-uint8_t requestRepeatedStart(uint8_t *ptrStatus);
-uint8_t requestStop(uint8_t *ptrStatus);
-uint8_t sendData(uint8_t *ptrData, uint8_t *ptrStatus);
-uint8_t receiveData(uint8_t *ptrData, uint8_t sendAck, uint8_t *ptrStatus);
+uint8_t requestStart(eI2cOperationResult *ptrStatus);
+uint8_t requestRepeatedStart(eI2cOperationResult *ptrStatus);
+uint8_t requestStop(eI2cOperationResult *ptrStatus);
+uint8_t sendData(uint8_t *ptrData, eI2cOperationResult *ptrStatus);
+uint8_t receiveData(uint8_t *ptrData, uint8_t sendAck, eI2cOperationResult *ptrStatus);
 uint8_t lockBus(void);
 uint8_t unlockBus(void);
 

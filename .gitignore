@@ -1,4 +1,6 @@
 nbproject/
+**/blank.c
+**/blank.h
 
 # Prerequisites
 *.d

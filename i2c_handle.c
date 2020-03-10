@@ -95,7 +95,7 @@ uint8_t sendData(uint8_t *ptrData, eI2cOperationResult *ptrStatus) {
     i2cOperation.opType = I2C_OPERATION_SEND;
     i2cOperation.ptrData = ptrData;
     i2cOperation.ptrStatus = ptrStatus;
-    i2cOperation.flags.requestInProgress = 1; 
+    i2cOperation.flags.requestInProgress = 1;
 }
 
 uint8_t receiveData(uint8_t *ptrData, uint8_t sendAck, eI2cOperationResult *ptrStatus) {
@@ -110,8 +110,8 @@ uint8_t receiveData(uint8_t *ptrData, uint8_t sendAck, eI2cOperationResult *ptrS
     i2cOperation.flags.requestInProgress = 1;
 }
 
-uint8_t lockBus(void){
-    if(i2cOperation.flags.busLocked) {
+uint8_t lockBus(void){ 
+   if(i2cOperation.flags.busLocked) {
         return 1;
     } else {
         i2cOperation.flags.busLocked = 1;
@@ -257,6 +257,8 @@ void runI2cHandler(void) {
             break;
             
         case I2C_STATE_ERROR:
+            i2cOperation.ptrStatus = I2C_OPERATION_RESULT_FAILURE;
+            i2cState = I2C_STATE_WAIT_CLEAR;
             break;
     }
 }

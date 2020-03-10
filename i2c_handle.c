@@ -5,8 +5,7 @@
 typedef union {
     struct {
         unsigned busLocked:1;
-        unsigned inUse:1;
-        unsigned request:1;
+        unsigned requestInProgress:1;
     };
     uint8_t byte;
 } tI2cFlags;
@@ -59,55 +58,56 @@ uint8_t unlockBus(void);
 
 
 uint8_t requestStart(eI2cOperationResult *ptrStatus) {
-    if(i2cOperation.flags.inUse) {
+    if(i2cOperation.flags.requestInProgress) {
         return 1;
     }
     
     i2cOperation.opType = I2C_OPERATION_START;
     i2cOperation.ptrStatus = ptrStatus;
-    i2cOperation.flags.inUse = 1;
+    i2cOperation.flags.requestInProgress = 1;
 }
 
 uint8_t requestRepeatedStart(eI2cOperationResult *ptrStatus) {
-    if(i2cOperation.flags.inUse) {
+    if(i2cOperation.flags.requestInProgress) {
         return 1;
     }
     
     i2cOperation.opType = I2C_OPERATION_REPEATED_START;
     i2cOperation.ptrStatus = ptrStatus;
-    i2cOperation.flags.inUse = 1;
+    i2cOperation.flags.requestInProgress = 1;
 }
 
 uint8_t requestStop(eI2cOperationResult *ptrStatus) {
-    if(i2cOperation.flags.inUse) {
+    if(i2cOperation.flags.requestInProgress) {
         return 1;
     }
     
     i2cOperation.opType = I2C_OPERATION_STOP;
     i2cOperation.ptrStatus = ptrStatus;
-    i2cOperation.flags.inUse = 1;
+    i2cOperation.flags.requestInProgress = 1;
 }
 
 uint8_t sendData(uint8_t *ptrData, eI2cOperationResult *ptrStatus) {
-    if(i2cOperation.flags.inUse) {
+    if(i2cOperation.flags.requestInProgress) {
         return 1;
     }
-    i2cOperation.opType = I2C_OPERATION_STOP;
+    
+    i2cOperation.opType = I2C_OPERATION_SEND;
     i2cOperation.ptrData = ptrData;
     i2cOperation.ptrStatus = ptrStatus;
-    i2cOperation.flags.inUse = 1; 
+    i2cOperation.flags.requestInProgress = 1; 
 }
 
 uint8_t receiveData(uint8_t *ptrData, uint8_t sendAck, eI2cOperationResult *ptrStatus) {
-    if(i2cOperation.flags.inUse) {
+    if(i2cOperation.flags.requestInProgress) {
         return 1;
     }
     
     i2cOperation.ack = sendAck;
-    i2cOperation.opType = I2C_OPERATION_STOP;
+    i2cOperation.opType = I2C_OPERATION_RECEIVE;
     i2cOperation.ptrData = ptrData;
     i2cOperation.ptrStatus = ptrStatus;
-    i2cOperation.flags.inUse = 1;
+    i2cOperation.flags.requestInProgress = 1;
 }
 
 uint8_t lockBus(void){
@@ -135,7 +135,7 @@ void runI2cHandler(void) {
             break;
             
         case I2C_STATE_WAIT_FOR_OPERATION:
-            if(i2cOperation.flags.inUse) {
+            if(i2cOperation.flags.requestInProgress) {
                 i2cState = I2C_STATE_HANDLE_OPERATION;
             }
             break;
@@ -170,6 +170,7 @@ void runI2cHandler(void) {
             
         case I2C_STATE_SEND_START_BIT:
             I2C1CONLbits.SEN = 1;
+            i2cState = I2C_STATE_WAIT_FOR_START_COMPLETE;
             break;
             
         case I2C_STATE_WAIT_FOR_START_COMPLETE:
@@ -180,6 +181,7 @@ void runI2cHandler(void) {
             
         case I2C_STATE_SEND_REPEATED_START:
             I2C1CONLbits.RSEN = 1;
+            i2cState = I2C_STATE_WAIT_FOR_REPEATED_START_COMPLETE;
             break;
             
         case I2C_STATE_WAIT_FOR_REPEATED_START_COMPLETE:
@@ -190,6 +192,7 @@ void runI2cHandler(void) {
             
         case I2C_STATE_SEND_STOP_BIT:
             I2C1CONLbits.PEN = 1;
+            i2cState = I2C_STATE_WAIT_FOR_STOP_COMPLETE;
             break;
             
         case I2C_STATE_WAIT_FOR_STOP_COMPLETE:
@@ -234,6 +237,7 @@ void runI2cHandler(void) {
             
         case I2C_STATE_HANDLE_DATA_RECEIVED:
             *i2cOperation.ptrData = I2C1RCV;
+            i2cState = I2C_STATE_MARK_OPERATION_COMPLETE;
             break;
             
         case I2C_STATE_MARK_OPERATION_COMPLETE:
@@ -248,7 +252,7 @@ void runI2cHandler(void) {
             break;
             
         case I2C_STATE_RESET:
-            i2cOperation.flags.inUse = 0;
+            i2cOperation.flags.requestInProgress = 0;
             i2cState = I2C_STATE_WAIT_FOR_OPERATION;
             break;
             

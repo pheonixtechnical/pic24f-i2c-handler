@@ -36,6 +36,7 @@ typedef enum {
     I2C_STATE_WAIT_ACK_COMPLETE,
     I2C_STATE_HANDLE_DATA_RECEIVED,
     I2C_STATE_MARK_OPERATION_COMPLETE,
+    I2C_STATE_MARK_DATA_OPERATION_COMPLETE,
     I2C_STATE_WAIT_CLEAR,
     I2C_STATE_RESET,
     I2C_STATE_ERROR,
@@ -65,6 +66,7 @@ uint8_t requestStart(eI2cOperationResult *ptrStatus) {
     i2cOperation.opType = I2C_OPERATION_START;
     i2cOperation.ptrStatus = ptrStatus;
     i2cOperation.flags.requestInProgress = 1;
+    return 0;
 }
 
 uint8_t requestRepeatedStart(eI2cOperationResult *ptrStatus) {
@@ -75,6 +77,7 @@ uint8_t requestRepeatedStart(eI2cOperationResult *ptrStatus) {
     i2cOperation.opType = I2C_OPERATION_REPEATED_START;
     i2cOperation.ptrStatus = ptrStatus;
     i2cOperation.flags.requestInProgress = 1;
+    return 0;
 }
 
 uint8_t requestStop(eI2cOperationResult *ptrStatus) {
@@ -85,6 +88,7 @@ uint8_t requestStop(eI2cOperationResult *ptrStatus) {
     i2cOperation.opType = I2C_OPERATION_STOP;
     i2cOperation.ptrStatus = ptrStatus;
     i2cOperation.flags.requestInProgress = 1;
+    return 0;
 }
 
 uint8_t sendData(uint8_t *ptrData, eI2cOperationResult *ptrStatus) {
@@ -96,6 +100,7 @@ uint8_t sendData(uint8_t *ptrData, eI2cOperationResult *ptrStatus) {
     i2cOperation.ptrData = ptrData;
     i2cOperation.ptrStatus = ptrStatus;
     i2cOperation.flags.requestInProgress = 1;
+    return 0;
 }
 
 uint8_t receiveData(uint8_t *ptrData, uint8_t sendAck, eI2cOperationResult *ptrStatus) {
@@ -108,6 +113,7 @@ uint8_t receiveData(uint8_t *ptrData, uint8_t sendAck, eI2cOperationResult *ptrS
     i2cOperation.ptrData = ptrData;
     i2cOperation.ptrStatus = ptrStatus;
     i2cOperation.flags.requestInProgress = 1;
+    return 0;
 }
 
 uint8_t lockBus(void){ 
@@ -208,7 +214,7 @@ void runI2cHandler(void) {
             
         case I2C_STATE_WAIT_DATA_SENT:
             if(!I2C1STATbits.TBF) {
-                i2cState = I2C_STATE_MARK_OPERATION_COMPLETE;
+                i2cState = I2C_STATE_MARK_DATA_OPERATION_COMPLETE;
             }
             break;
             
@@ -239,14 +245,19 @@ void runI2cHandler(void) {
             *i2cOperation.ptrData = I2C1RCV;
             i2cState = I2C_STATE_MARK_OPERATION_COMPLETE;
             break;
-            
+                    
         case I2C_STATE_MARK_OPERATION_COMPLETE:
-            i2cOperation.ptrStatus = I2C_OPERATION_RESULT_SUCCESS;
+            *i2cOperation.ptrStatus = I2C_OPERATION_RESULT_SUCCESS;
+            i2cState = I2C_STATE_WAIT_CLEAR;
+            break;
+            
+        case I2C_STATE_MARK_DATA_OPERATION_COMPLETE:
+            *i2cOperation.ptrStatus = I2C1STATbits.ACKSTAT ? I2C_OPERATION_RESULT_SUCCESS_NACK : I2C_OPERATION_RESULT_SUCCESS_ACK;
             i2cState = I2C_STATE_WAIT_CLEAR;
             break;
             
         case I2C_STATE_WAIT_CLEAR:
-            if(i2cOperation.ptrStatus == 0) {
+            if(*i2cOperation.ptrStatus == 0) {
                 i2cState = I2C_STATE_RESET;
             }
             break;
@@ -257,7 +268,7 @@ void runI2cHandler(void) {
             break;
             
         case I2C_STATE_ERROR:
-            i2cOperation.ptrStatus = I2C_OPERATION_RESULT_FAILURE;
+            *i2cOperation.ptrStatus = I2C_OPERATION_RESULT_FAILURE;
             i2cState = I2C_STATE_WAIT_CLEAR;
             break;
     }
